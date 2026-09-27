@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HireIQ — NLP Resume Screening & Job-Match Scorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090a10;
+      --card: rgba(20, 22, 35, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --peach: #fedec8;
+      --green: #34d399;
+      --blue: #38bdf8;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.6; padding: 40px 20px; }
+    .container { max-width: 1080px; margin: 0 auto; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 9999px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 16px; }
+    h1 { font-size: clamp(32px, 4vw, 44px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+    p.lead { font-size: 17px; color: var(--muted); margin-bottom: 32px; max-width: 680px; }
+    .grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; backdrop-filter: blur(20px); }
+    .cand-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; transition: all .2s; cursor: pointer; }
+    .cand-card:hover, .cand-card.active { border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); }
+    .cand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .cand-name { font-size: 16px; font-weight: 700; color: #fff; }
+    .match-pill { padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .skill-tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); color: #cbd5e1; }
+    .skill-tag.matched { background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.25); }
+    .detail-view { background: #06070a; border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .back-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .back-link { font-size: 13.5px; font-weight: 600; color: var(--muted); text-decoration: none; }
+    .back-link:hover { color: var(--blue); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="back-nav">
+      <a href="https://sharmikamurugesan-1.github.io/sharmika-portfolio/" class="back-link">← Back to Sharmika's Portfolio</a>
+      <a href="https://github.com/sharmikamurugesan-1/HireIQ-resume-screening" target="_blank" class="back-link">GitHub Repository ↗</a>
+    </div>
+
+    <div class="badge">🎯 Case Study 05 — Live NLP Screening Demo</div>
+    <h1>HireIQ Candidate Scorer</h1>
+    <p class="lead">Screens and ranks 100 resumes against job descriptions in under 30 seconds using TF-IDF similarity and skill-gap analysis.</p>
+
+    <div class="grid">
+      <div class="box">
+        <h3 style="margin-bottom: 16px; font-size: 16px;">Target Role: Senior Python & AI Engineer</h3>
+        <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 16px;">Required: Python, FastAPI, Machine Learning, RAG/FAISS, Docker, Git.</p>
+
+        <div class="cand-card active" onclick="selectCandidate(0)">
+          <div class="cand-header">
+            <span class="cand-name">#1 Alex Chen</span>
+            <span class="match-pill">78.8% Match</span>
+          </div>
+          <p style="font-size: 12px; color: var(--muted);">5+ Years · Senior AI Developer</p>
+          <div class="skill-tags">
+            <span class="skill-tag matched">✓ Python</span>
+            <span class="skill-tag matched">✓ FastAPI</span>
+            <span class="skill-tag matched">✓ RAG</span>
+            <span class="skill-tag matched">✓ PyTorch</span>
+          </div>
+        </div>
+
+        <div class="cand-card" onclick="selectCandidate(1)">
+          <div class="cand-header">
+            <span class="cand-name">#2 Priya Sharma</span>
+            <span class="match-pill" style="color: #38bdf8; background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">39.4% Match</span>
+          </div>
+          <p style="font-size: 12px; color: var(--muted);">3 Years · Data Analyst</p>
+          <div class="skill-tags">
+            <span class="skill-tag matched">✓ Python</span>
+            <span class="skill-tag">Pandas</span>
+            <span class="skill-tag">Power BI</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3 style="margin-bottom: 16px; font-size: 16px;">Candidate Profile & Skill Gap Analysis</h3>
+        <div class="detail-view" id="candidateDetails">
+          <!-- Filled dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CANDIDATES = [
+      {
+        name: "Alex Chen",
+        score: "78.8%",
+        verdict: "Strong Match",
+        matched: ["Python", "FastAPI", "RAG", "FAISS", "Scikit-Learn", "Docker"],
+        missing: ["Kubernetes", "Redis"],
+        summary: "Highly aligned background. Strong experience in building vector search pipelines with FAISS and Python. Direct fit for Senior Python/AI role."
+      },
+      {
+        name: "Priya Sharma",
+        score: "39.4%",
+        verdict: "Potential Fit (Data Focused)",
+        matched: ["Python", "Pandas", "SQL"],
+        missing: ["FastAPI", "RAG", "Docker"],
+        summary: "Solid analytical foundation with Python and Pandas, but lacks backend microservices and RAG vector experience required for this specific role."
+      }
+    ];
+
+    function selectCandidate(idx) {
+      document.querySelectorAll('.cand-card').forEach((c, i) => {
+        if(i === idx) c.classList.add('active'); else c.classList.remove('active');
+      });
+      const cand = CANDIDATES[idx];
+      document.getElementById('candidateDetails').innerHTML = `
+        <h4 style="font-size: 18px; color: #fff; margin-bottom: 4px;">${cand.name}</h4>
+        <div style="font-size: 13px; color: var(--green); font-weight: bold; margin-bottom: 16px;">Verdict: ${cand.verdict} (${cand.score})</div>
+        
+        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Matched Core Skills:</h5>
+        <div class="skill-tags" style="margin-bottom: 16px;">
+          ${cand.matched.map(s => `<span class="skill-tag matched">✓ ${s}</span>`).join('')}
+        </div>
+
+        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Missing Requirements:</h5>
+        <div class="skill-tags" style="margin-bottom: 16px;">
+          ${cand.missing.map(s => `<span class="skill-tag" style="color: #f87171; border: 1px solid rgba(248,113,113,0.3);">✗ ${s}</span>`).join('')}
+        </div>
+
+        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Executive Summary:</h5>
+        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.6;">${cand.summary}</p>
+      `;
+    }
+
+    selectCandidate(0);
+  </script>
+</body>
+</html>
