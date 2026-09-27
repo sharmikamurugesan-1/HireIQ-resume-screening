@@ -1,59 +1,86 @@
 """
-HireIQ — Main Runner & Flask Web Interface
+HireIQ — REST API Server
+Provides endpoints for resume screening, candidate ranking, blind PII anonymization,
+status pipeline transitions, and shortlist reports.
 """
 
-import os
-import glob
+from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 from parser import ResumeParser
 from matcher import JobMatcher
 
-TARGET_JOB_DESCRIPTION = """
-Senior Python & AI Engineer
-Requirements:
-- 3+ years of experience with Python, FastAPI, and Machine Learning.
-- Experience with NLP, Scikit-learn, vector search (FAISS or RAG), and REST API design.
-- Familiarity with Docker, PostgreSQL or SQLite, and Git.
-"""
+app = Flask(__name__)
+CORS(app)
 
-def screen_resumes(resume_dir: str = "sample_resumes") -> list:
-    if not os.path.exists(resume_dir):
-        from sample_resumes.generate_resumes import create_sample_resumes
-        create_sample_resumes(resume_dir)
+parser = ResumeParser()
 
-    files = glob.glob(os.path.join(resume_dir, "*.txt")) + glob.glob(os.path.join(resume_dir, "*.pdf"))
-    if not files:
-        from sample_resumes.generate_resumes import create_sample_resumes
-        create_sample_resumes(resume_dir)
-        files = glob.glob(os.path.join(resume_dir, "*.txt"))
+# In-memory candidate repository with persistence support
+CANDIDATE_STORE = []
 
-    parser = ResumeParser()
-    candidates = []
-    for f in files:
-        candidates.append(parser.parse_file(f))
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({
+        "status": "online",
+        "service": "HireIQ Assistive Screening Engine",
+        "version": "2.0.0",
+        "capabilities": ["multi_criteria_scoring", "skill_gap_analysis", "pii_anonymization", "pipeline_tracking"]
+    })
 
-    matcher = JobMatcher(TARGET_JOB_DESCRIPTION)
-    ranked = matcher.score_candidates(candidates)
-    return ranked
+@app.route('/api/screen', methods=['POST'])
+def screen_resumes():
+    """Screens candidate resumes against target job specifications."""
+    data = request.get_json(force=True) or {}
+    job_title = data.get("job_title", "Senior Python & AI Engineer")
+    required_skills = data.get("required_skills", ["Python", "FastAPI", "RAG", "Docker", "Git"])
+    min_exp = int(data.get("min_years_experience", 3))
+    resumes_text = data.get("resumes", [])
 
-def main():
-    print("=" * 65)
-    print("🎯 HireIQ — NLP Resume Screening & Job-Match Scorer")
-    print("=" * 65)
-    print("[*] Target Role: Senior Python & AI Engineer")
-    print("[*] Parsing uploaded resumes from 'sample_resumes/'...")
+    matcher = JobMatcher(job_title=job_title, required_skills=required_skills, min_years_exp=min_exp)
     
-    ranked = screen_resumes()
-    print(f"\n[✓] Screened and ranked {len(ranked)} candidates in 0.42 seconds:\n")
-    print(f"{'Rank':<5} | {'Candidate Name':<16} | {'Match':<8} | {'Verdict':<15} | {'Skills Found'}")
-    print("-" * 65)
-    
-    for i, c in enumerate(ranked, 1):
-        skills_str = ", ".join(c['skills'][:4])
-        print(f"#{i:<4} | {c['name']:<16} | {c['match_score']:>5.1f}% | {c['verdict']:<15} | {skills_str}")
+    parsed_candidates = []
+    for idx, r_text in enumerate(resumes_text):
+        cand = parser.parse_text(r_text, filename=f"resume_{idx+1}.txt")
+        parsed_candidates.append(cand)
 
-    print("=" * 65)
-    print("[*] Benchmark: Evaluated 100% of candidate pool in under 1 second!")
-    print("=" * 65)
+    ranked = matcher.rank_candidates(parsed_candidates)
+    
+    global CANDIDATE_STORE
+    CANDIDATE_STORE = ranked
+    
+    return jsonify({
+        "job_title": job_title,
+        "required_skills": required_skills,
+        "total_screened": len(ranked),
+        "candidates": ranked
+    })
+
+@app.route('/api/candidates/<blind_id>/status', methods=['POST'])
+def update_candidate_status(blind_id: str):
+    """Updates candidate hiring pipeline stage (NEW, UNDER_REVIEW, SHORTLISTED, PASSED)."""
+    data = request.get_json(force=True) or {}
+    new_status = data.get("status", "UNDER_REVIEW")
+    notes = data.get("notes", "")
+
+    for c in CANDIDATE_STORE:
+        if c.get("blind_id") == blind_id:
+            c["status"] = new_status
+            if notes:
+                c["recruiter_notes"] = notes
+            return jsonify({"success": True, "blind_id": blind_id, "status": new_status})
+
+    return jsonify({"error": "Candidate not found"}), 404
+
+@app.route('/api/export/shortlist', methods=['GET'])
+def export_shortlist():
+    """Generates a structured recruitment shortlist report."""
+    shortlist = [c for c in CANDIDATE_STORE if c.get("status") == "SHORTLISTED"] or CANDIDATE_STORE
+    csv_rows = ["Blind_ID,Name,Match_Score,Experience,Matched_Skills,Missing_Skills,Status,Notes"]
+    for c in shortlist:
+        matched = ";".join(c["skill_gap_analysis"]["matched_skills"])
+        missing = ";".join(c["skill_gap_analysis"]["missing_critical_skills"])
+        csv_rows.append(f"{c['blind_id']},{c['name']},{c['match_score']}%,{c['years_experience']} yrs,\"{matched}\",\"{missing}\",{c['status']},\"{c['recruiter_notes']}\"")
+
+    return Response("\n".join(csv_rows), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=hireiq_candidate_shortlist.csv"})
 
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=5004, debug=True)

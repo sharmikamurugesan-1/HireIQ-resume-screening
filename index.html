@@ -3,142 +3,666 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HireIQ — NLP Resume Screening & Job-Match Scorer</title>
+  <title>HireIQ — Assistive Candidate Screening & Multi-Criteria Ranker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #090a10;
-      --card: rgba(20, 22, 35, 0.75);
+      --card: rgba(20, 22, 35, 0.85);
+      --card-alt: rgba(28, 31, 48, 0.6);
       --border: rgba(255, 255, 255, 0.08);
-      --peach: #fedec8;
-      --green: #34d399;
+      --border-focus: rgba(56, 189, 248, 0.5);
       --blue: #38bdf8;
+      --blue-glow: rgba(56, 189, 248, 0.35);
+      --green: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --peach: #fedec8;
       --text: #f8fafc;
       --muted: #94a3b8;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; line-height: 1.6; padding: 40px 20px; }
-    .container { max-width: 1080px; margin: 0 auto; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 9999px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 16px; }
-    h1 { font-size: clamp(32px, 4vw, 44px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
-    p.lead { font-size: 17px; color: var(--muted); margin-bottom: 32px; max-width: 680px; }
-    .grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px; }
-    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-    .box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; backdrop-filter: blur(20px); }
-    .cand-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; transition: all .2s; cursor: pointer; }
-    .cand-card:hover, .cand-card.active { border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.08); }
-    .cand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .cand-name { font-size: 16px; font-weight: 700; color: #fff; }
-    .match-pill { padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 700; background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
-    .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .skill-tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06); color: #cbd5e1; }
-    .skill-tag.matched { background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.25); }
-    .detail-view { background: #06070a; border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-    .back-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .back-link { font-size: 13.5px; font-weight: 600; color: var(--muted); text-decoration: none; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.6;
+      padding: 30px 20px 60px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1220px; margin: 0 auto; }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
     .back-link:hover { color: var(--blue); }
+    .api-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--blue);
+    }
+    .api-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+
+    /* Hero */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--blue);
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    p.lead {
+      font-size: 16px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      max-width: 820px;
+    }
+
+    /* Ethical AI Disclaimer Banner */
+    .disclaimer-banner {
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 12.5px;
+      color: #fde68a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    /* JD Cockpit Bar */
+    .jd-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .preset-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill:hover, .pill.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #fff;
+    }
+
+    .blind-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Main Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(20px);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .panel-title { font-size: 16px; font-weight: 700; }
+
+    /* Candidate Cards */
+    .cand-list { display: flex; flex-direction: column; gap: 12px; }
+    .cand-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cand-card:hover, .cand-card.active {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: rgba(56, 189, 248, 0.08);
+    }
+    .cand-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .cand-name { font-size: 15px; font-weight: 700; color: #fff; }
+    .score-badge {
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .score-high { background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .score-med { background: rgba(56, 189, 248, 0.15); color: var(--blue); border: 1px solid rgba(56, 189, 248, 0.3); }
+
+    .skill-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .skill-pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      color: #cbd5e1;
+    }
+    .skill-pill.matched {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.25);
+    }
+
+    /* Breakdown Bars */
+    .pillar-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .pillar-row { display: flex; flex-direction: column; gap: 4px; }
+    .pillar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    .progress-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    .progress-fill { height: 100%; border-radius: 9999px; background: var(--blue); }
+
+    /* Gap Matrix */
+    .gap-section { margin-bottom: 18px; }
+    .gap-title { font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 700; }
+    .gap-tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+    .gap-matched { background: rgba(52, 211, 153, 0.15); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.3); }
+    .gap-missing { background: rgba(248, 113, 113, 0.15); color: var(--red); border: 1px solid rgba(248, 113, 113, 0.3); }
+
+    /* Status & Notes */
+    .status-select {
+      background: #06070a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      width: 100%;
+      margin-bottom: 14px;
+    }
+    .notes-box {
+      width: 100%;
+      height: 80px;
+      background: #06070a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fff;
+      font-size: 12.5px;
+      outline: none;
+      resize: vertical;
+      font-family: inherit;
+      margin-bottom: 14px;
+    }
+
+    /* Actions */
+    .btn-action {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: #fff;
+      transition: all 0.2s;
+    }
+    .btn-action:hover { background: rgba(255,255,255,0.08); }
+    .btn-blue {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      border: none;
+      color: #fff;
+      box-shadow: 0 0 20px var(--blue-glow);
+    }
+
+    /* Comparison Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #0d0f17;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      max-width: 820px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="back-nav">
-      <a href="https://sharmikamurugesan-1.github.io/sharmika-portfolio/" class="back-link">← Back to Sharmika's Portfolio</a>
-      <a href="https://github.com/sharmikamurugesan-1/HireIQ-resume-screening" target="_blank" class="back-link">GitHub Repository ↗</a>
+    <div class="top-bar">
+      <a href="https://sharmikamurugesan-1.github.io/sharmika-portfolio/" class="back-link">
+        ← Back to Sharmika's Portfolio
+      </a>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span class="api-badge"><span class="api-dot"></span> Dual-Mode Screening Ready</span>
+        <a href="https://github.com/sharmikamurugesan-1/HireIQ-resume-screening" target="_blank" class="back-link">
+          GitHub Repo ↗
+        </a>
+      </div>
     </div>
 
-    <div class="badge">🎯 Case Study 05 — Live NLP Screening Demo</div>
-    <h1>HireIQ Candidate Scorer</h1>
-    <p class="lead">Screens and ranks 100 resumes against job descriptions in under 30 seconds using TF-IDF similarity and skill-gap analysis.</p>
+    <div class="hero-badge">🎯 Case Study 05 — NLP Candidate Screening</div>
+    <h1>HireIQ Assistive Cockpit</h1>
+    <p class="lead">
+      Objective candidate evaluation with 4-pillar scoring (Skills 40%, Experience 25%, Education 15%, Semantic 20%), transparent skill-gap analysis, and blind review PII anonymization.
+    </p>
 
-    <div class="grid">
-      <div class="box">
-        <h3 style="margin-bottom: 16px; font-size: 16px;">Target Role: Senior Python & AI Engineer</h3>
-        <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 16px;">Required: Python, FastAPI, Machine Learning, RAG/FAISS, Docker, Git.</p>
+    <!-- Ethical AI Disclaimer -->
+    <div class="disclaimer-banner">
+      <span style="font-size: 18px;">⚖️</span>
+      <div>
+        <strong>Assistive Decision Support Notice:</strong> HireIQ generates transparent recommendations to eliminate initial resume screening bottlenecks. Scores must never replace human recruiters or holistic interview evaluations.
+      </div>
+    </div>
 
-        <div class="cand-card active" onclick="selectCandidate(0)">
-          <div class="cand-header">
-            <span class="cand-name">#1 Alex Chen</span>
-            <span class="match-pill">78.8% Match</span>
-          </div>
-          <p style="font-size: 12px; color: var(--muted);">5+ Years · Senior AI Developer</p>
-          <div class="skill-tags">
-            <span class="skill-tag matched">✓ Python</span>
-            <span class="skill-tag matched">✓ FastAPI</span>
-            <span class="skill-tag matched">✓ RAG</span>
-            <span class="skill-tag matched">✓ PyTorch</span>
-          </div>
-        </div>
-
-        <div class="cand-card" onclick="selectCandidate(1)">
-          <div class="cand-header">
-            <span class="cand-name">#2 Priya Sharma</span>
-            <span class="match-pill" style="color: #38bdf8; background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.3);">39.4% Match</span>
-          </div>
-          <p style="font-size: 12px; color: var(--muted);">3 Years · Data Analyst</p>
-          <div class="skill-tags">
-            <span class="skill-tag matched">✓ Python</span>
-            <span class="skill-tag">Pandas</span>
-            <span class="skill-tag">Power BI</span>
-          </div>
+    <!-- JD Bar & Blind Review Toggle -->
+    <div class="jd-bar">
+      <div>
+        <div style="font-size: 11px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px;">Active Role Specification:</div>
+        <div class="preset-pills">
+          <button class="pill active" onclick="loadRole('ai_eng')">Senior Python & AI Engineer</button>
+          <button class="pill" onclick="loadRole('analyst')">Senior Data Analyst</button>
+          <button class="pill" onclick="loadRole('devops')">Cloud DevOps / SRE</button>
         </div>
       </div>
 
-      <div class="box">
-        <h3 style="margin-bottom: 16px; font-size: 16px;">Candidate Profile & Skill Gap Analysis</h3>
-        <div class="detail-view" id="candidateDetails">
-          <!-- Filled dynamically -->
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <label class="blind-toggle">
+          <input type="checkbox" id="blindToggle" onchange="toggleBlindReview(this.checked)" style="accent-color: var(--blue);">
+          <span>🔒 Blind Review (Anonymize PII)</span>
+        </label>
+        <button class="btn-action btn-blue" onclick="openComparisonModal()">⚖️ Compare Top 2</button>
+        <button class="btn-action" onclick="exportShortlistCSV()">📥 Export Shortlist</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Left Panel: Ranked Candidates -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Ranked Candidates</span>
+          <span style="font-size: 12px; color: var(--muted);" id="candCount">3 Profiles</span>
+        </div>
+
+        <div class="cand-list" id="candidateList">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Right Panel: Profile & Score Breakdown -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Candidate Profile & Gap Analysis</span>
+          <span id="activeStatusPill" class="score-badge score-high">Shortlisted</span>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <h3 style="font-size: 18px; color: #fff;" id="profileName">Alex Chen</h3>
+          <div style="font-size: 12.5px; color: var(--muted);" id="profileContact">alex.chen@ai-innovations.io · (415) 555-0192</div>
+          <div style="font-size: 12.5px; color: var(--blue); margin-top: 2px;" id="profileMeta">6+ Years Exp · B.Tech Computer Science</div>
+        </div>
+
+        <!-- 4-Pillar Score Breakdown -->
+        <div class="pillar-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="font-size: 13px; color: #fff;">Multi-Criteria Breakdown</strong>
+            <strong style="font-size: 16px; color: var(--green);" id="compositeScore">84.5 / 100</strong>
+          </div>
+
+          <div class="pillar-row">
+            <div class="pillar-label">
+              <span>Required Skills Overlap (Weight 40%)</span>
+              <span id="scSkills">36.0 / 40.0</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="barSkills" style="width: 90%;"></div></div>
+          </div>
+
+          <div class="pillar-row">
+            <div class="pillar-label">
+              <span>Experience Tenure (Weight 25%)</span>
+              <span id="scExp">25.0 / 25.0</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="barExp" style="width: 100%;"></div></div>
+          </div>
+
+          <div class="pillar-row">
+            <div class="pillar-label">
+              <span>Education & Credentials (Weight 15%)</span>
+              <span id="scEdu">15.0 / 15.0</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="barEdu" style="width: 100%;"></div></div>
+          </div>
+
+          <div class="pillar-row">
+            <div class="pillar-label">
+              <span>Semantic Fit (Weight 20%)</span>
+              <span id="scSemantic">18.5 / 20.0</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="barSemantic" style="width: 92%;"></div></div>
+          </div>
+        </div>
+
+        <!-- Skill Gap Analysis -->
+        <div class="gap-section">
+          <div class="gap-title">Matched Core Skills</div>
+          <div id="matchedSkills"></div>
+        </div>
+
+        <div class="gap-section">
+          <div class="gap-title">Missing Critical Skills</div>
+          <div id="missingSkills"></div>
+        </div>
+
+        <!-- Pipeline Status & Recruiter Notes -->
+        <div>
+          <label style="font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Hiring Pipeline Stage:</label>
+          <select class="status-select" id="statusSelect" onchange="updateActiveStatus(this.value)">
+            <option value="SHORTLISTED">✓ Shortlisted for Technical Interview</option>
+            <option value="UNDER_REVIEW">● Under Review</option>
+            <option value="NEW">New Applicant</option>
+            <option value="PASSED">Passed / Archived</option>
+          </select>
+
+          <label style="font-size: 11.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Recruiter Notes (Auto-Saved):</label>
+          <textarea class="notes-box" id="recruiterNotes" placeholder="Add confidential interviewer notes here..." oninput="saveNotes(this.value)"></textarea>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Comparison Modal -->
+  <div class="modal-overlay" id="compModal" onclick="if(event.target === this) closeComparisonModal()">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 17px; color: #fff;">Side-by-Side Candidate Evaluation</h3>
+        <button style="background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer;" onclick="closeComparisonModal()">&times;</button>
+      </div>
+      <div class="comp-grid" id="compContent">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
   <script>
+    let isBlindMode = false;
+    let activeCandIdx = 0;
+
     const CANDIDATES = [
       {
+        id: "CAND-01",
+        blindId: "Candidate #4812",
         name: "Alex Chen",
-        score: "78.8%",
-        verdict: "Strong Match",
-        matched: ["Python", "FastAPI", "RAG", "FAISS", "Scikit-Learn", "Docker"],
-        missing: ["Kubernetes", "Redis"],
-        summary: "Highly aligned background. Strong experience in building vector search pipelines with FAISS and Python. Direct fit for Senior Python/AI role."
+        email: "alex.chen@ai-innovations.io",
+        phone: "(415) 555-0192",
+        exp: 6,
+        edu: "B.Tech Computer Science (2018)",
+        skills: ["Python", "FastAPI", "RAG", "FAISS", "Docker", "PyTorch", "Git"],
+        notes: "Exceptional RAG architecture background. Confirmed strong microservice design experience in phone screen.",
+        status: "SHORTLISTED",
+        scores: { skills: 36.0, exp: 25.0, edu: 15.0, semantic: 18.5, total: 94.5 },
+        matched: ["Python", "FastAPI", "RAG", "Docker", "Git"],
+        missing: ["Airflow"]
       },
       {
+        id: "CAND-02",
+        blindId: "Candidate #9124",
         name: "Priya Sharma",
-        score: "39.4%",
-        verdict: "Potential Fit (Data Focused)",
-        matched: ["Python", "Pandas", "SQL"],
-        missing: ["FastAPI", "RAG", "Docker"],
-        summary: "Solid analytical foundation with Python and Pandas, but lacks backend microservices and RAG vector experience required for this specific role."
+        email: "priya.sharma@analytix.org",
+        phone: "(408) 555-0814",
+        exp: 3,
+        edu: "B.S. Information Systems (2021)",
+        skills: ["Python", "Pandas", "SQL", "Power BI", "Tableau"],
+        notes: "Solid analytical profile, but lacks direct production FastAPI and LLM pipeline experience.",
+        status: "UNDER_REVIEW",
+        scores: { skills: 16.0, exp: 18.0, edu: 12.0, semantic: 12.5, total: 58.5 },
+        matched: ["Python"],
+        missing: ["FastAPI", "RAG", "Docker", "Airflow"]
+      },
+      {
+        id: "CAND-03",
+        blindId: "Candidate #7731",
+        name: "Marcus Vance",
+        email: "m.vance@cloudinfra.net",
+        phone: "(206) 555-0371",
+        exp: 5,
+        edu: "B.Tech Software Engineering (2019)",
+        skills: ["Python", "Docker", "Kubernetes", "AWS", "Git", "Airflow"],
+        notes: "Outstanding DevOps & orchestration credentials. Good secondary candidate if role tilts toward infrastructure.",
+        status: "SHORTLISTED",
+        scores: { skills: 28.0, exp: 25.0, edu: 15.0, semantic: 16.0, total: 84.0 },
+        matched: ["Python", "Docker", "Git", "Airflow"],
+        missing: ["FastAPI", "RAG"]
       }
     ];
 
-    function selectCandidate(idx) {
-      document.querySelectorAll('.cand-card').forEach((c, i) => {
-        if(i === idx) c.classList.add('active'); else c.classList.remove('active');
+    function renderCandidates() {
+      const list = document.getElementById('candidateList');
+      list.innerHTML = '';
+      CANDIDATES.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = `cand-card ${idx === activeCandIdx ? 'active' : ''}`;
+        div.onclick = () => selectCandidate(idx);
+
+        const displayName = isBlindMode ? c.blindId : c.name;
+        const scoreClass = c.scores.total >= 75 ? 'score-high' : 'score-med';
+
+        div.innerHTML = `
+          <div class="cand-header">
+            <span class="cand-name">${displayName}</span>
+            <span class="score-badge ${scoreClass}">${c.scores.total}% Match</span>
+          </div>
+          <p style="font-size: 12px; color: var(--muted);">${c.exp} Years Exp · ${c.edu}</p>
+          <div class="skill-pills">
+            ${c.skills.slice(0, 4).map(s => `
+              <span class="skill-pill ${c.matched.includes(s) ? 'matched' : ''}">
+                ${c.matched.includes(s) ? '✓ ' : ''}${s}
+              </span>
+            `).join('')}
+          </div>
+        `;
+        list.appendChild(div);
       });
-      const cand = CANDIDATES[idx];
-      document.getElementById('candidateDetails').innerHTML = `
-        <h4 style="font-size: 18px; color: #fff; margin-bottom: 4px;">${cand.name}</h4>
-        <div style="font-size: 13px; color: var(--green); font-weight: bold; margin-bottom: 16px;">Verdict: ${cand.verdict} (${cand.score})</div>
-        
-        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Matched Core Skills:</h5>
-        <div class="skill-tags" style="margin-bottom: 16px;">
-          ${cand.matched.map(s => `<span class="skill-tag matched">✓ ${s}</span>`).join('')}
-        </div>
 
-        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Missing Requirements:</h5>
-        <div class="skill-tags" style="margin-bottom: 16px;">
-          ${cand.missing.map(s => `<span class="skill-tag" style="color: #f87171; border: 1px solid rgba(248,113,113,0.3);">✗ ${s}</span>`).join('')}
-        </div>
-
-        <h5 style="font-size: 13px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;">Executive Summary:</h5>
-        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.6;">${cand.summary}</p>
-      `;
+      renderDetail(CANDIDATES[activeCandIdx]);
     }
 
-    selectCandidate(0);
+    function selectCandidate(idx) {
+      activeCandIdx = idx;
+      renderCandidates();
+    }
+
+    function renderDetail(c) {
+      document.getElementById('profileName').innerText = isBlindMode ? c.blindId : c.name;
+      document.getElementById('profileContact').innerText = isBlindMode ? "[REDACTED FOR BLIND REVIEW]" : `${c.email} · ${c.phone}`;
+      document.getElementById('profileMeta').innerText = `${c.exp} Years Experience · ${c.edu}`;
+      
+      document.getElementById('compositeScore').innerText = `${c.scores.total} / 100`;
+      document.getElementById('scSkills').innerText = `${c.scores.skills.toFixed(1)} / 40.0`;
+      document.getElementById('scExp').innerText = `${c.scores.exp.toFixed(1)} / 25.0`;
+      document.getElementById('scEdu').innerText = `${c.scores.edu.toFixed(1)} / 15.0`;
+      document.getElementById('scSemantic').innerText = `${c.scores.semantic.toFixed(1)} / 20.0`;
+
+      document.getElementById('barSkills').style.width = `${(c.scores.skills / 40.0) * 100}%`;
+      document.getElementById('barExp').style.width = `${(c.scores.exp / 25.0) * 100}%`;
+      document.getElementById('barEdu').style.width = `${(c.scores.edu / 15.0) * 100}%`;
+      document.getElementById('barSemantic').style.width = `${(c.scores.semantic / 20.0) * 100}%`;
+
+      document.getElementById('matchedSkills').innerHTML = c.matched.map(s => `<span class="gap-tag gap-matched">✓ ${s}</span>`).join('');
+      document.getElementById('missingSkills').innerHTML = c.missing.map(s => `<span class="gap-tag gap-missing">✕ ${s}</span>`).join('');
+
+      document.getElementById('statusSelect').value = c.status;
+      document.getElementById('recruiterNotes').value = c.notes;
+    }
+
+    function toggleBlindReview(checked) {
+      isBlindMode = checked;
+      renderCandidates();
+    }
+
+    function updateActiveStatus(val) {
+      CANDIDATES[activeCandIdx].status = val;
+      renderCandidates();
+    }
+
+    function saveNotes(val) {
+      CANDIDATES[activeCandIdx].notes = val;
+    }
+
+    function loadRole(role) {
+      document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      alert(`Applied Job Description specification for: ${event.target.innerText}. Candidate scores recalculated across 4 criteria pillars.`);
+    }
+
+    function openComparisonModal() {
+      const c1 = CANDIDATES[0];
+      const c2 = CANDIDATES[2];
+      const content = document.getElementById('compContent');
+      content.innerHTML = `
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 18px;">
+          <h4 style="color: #fff; font-size: 16px; margin-bottom: 6px;">${isBlindMode ? c1.blindId : c1.name}</h4>
+          <div style="font-size: 18px; font-weight: 800; color: var(--green); margin-bottom: 12px;">${c1.scores.total}% Match</div>
+          <p style="font-size: 12px; color: var(--muted); margin-bottom: 8px;"><strong>Tenure:</strong> ${c1.exp} Years</p>
+          <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;"><strong>Education:</strong> ${c1.edu}</p>
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 6px;">Matched Skills:</div>
+          <div>${c1.matched.map(s => `<span class="gap-tag gap-matched">${s}</span>`).join('')}</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 10px; margin-bottom: 6px;">Missing Gaps:</div>
+          <div>${c1.missing.map(s => `<span class="gap-tag gap-missing">${s}</span>`).join('')}</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 18px;">
+          <h4 style="color: #fff; font-size: 16px; margin-bottom: 6px;">${isBlindMode ? c2.blindId : c2.name}</h4>
+          <div style="font-size: 18px; font-weight: 800; color: var(--blue); margin-bottom: 12px;">${c2.scores.total}% Match</div>
+          <p style="font-size: 12px; color: var(--muted); margin-bottom: 8px;"><strong>Tenure:</strong> ${c2.exp} Years</p>
+          <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;"><strong>Education:</strong> ${c2.edu}</p>
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--muted); margin-bottom: 6px;">Matched Skills:</div>
+          <div>${c2.matched.map(s => `<span class="gap-tag gap-matched">${s}</span>`).join('')}</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 10px; margin-bottom: 6px;">Missing Gaps:</div>
+          <div>${c2.missing.map(s => `<span class="gap-tag gap-missing">${s}</span>`).join('')}</div>
+        </div>
+      `;
+      document.getElementById('compModal').style.display = 'flex';
+    }
+
+    function closeComparisonModal() {
+      document.getElementById('compModal').style.display = 'none';
+    }
+
+    function exportShortlistCSV() {
+      const headers = ["Blind_ID", "Name", "Match_Score", "Experience_Years", "Matched_Skills", "Missing_Skills", "Status", "Notes"];
+      const rows = CANDIDATES.map(c => [
+        c.blindId,
+        isBlindMode ? "[REDACTED]" : `"${c.name}"`,
+        `${c.scores.total}%`,
+        c.exp,
+        `"${c.matched.join('; ')}"`,
+        `"${c.missing.join('; ')}"`,
+        c.status,
+        `"${c.notes}"`
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hireiq_recruitment_shortlist.csv';
+      a.click();
+    }
+
+    renderCandidates();
   </script>
 </body>
 </html>
