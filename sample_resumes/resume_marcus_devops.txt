@@ -1,0 +1,10 @@
+Marcus Brody
+Email: marcus.b@example.com | Phone: +1-555-0982
+Cloud & Site Reliability Engineer with 4 years of experience.
+
+Core Skills:
+- Docker, Kubernetes, AWS, Terraform, Linux, Git, Bash, CI/CD, Python scripting.
+Experience:
+- Automated infrastructure provisioning using Terraform and Docker.
+Education:
+- B.S. in Information Technology

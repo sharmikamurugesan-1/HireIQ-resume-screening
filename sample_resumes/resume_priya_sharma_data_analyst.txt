@@ -1,0 +1,11 @@
+Priya Sharma
+Email: priya.s@example.com | Phone: +91-98765-43210
+Data Analyst with 3 years of experience in business reporting, SQL, and data visualization.
+
+Core Skills:
+- Python, Pandas, NumPy, Power BI, Tableau, SQL, SQLite, Excel, Matplotlib.
+Experience:
+- Automated weekly executive reports reducing processing time by 80% using Pandas and Python.
+- Designed interactive Power BI dashboards tracking monthly revenue KPIs.
+Education:
+- B.Tech in Artificial Intelligence & Data Science

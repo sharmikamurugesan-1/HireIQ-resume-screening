@@ -1,0 +1,11 @@
+Alex Chen
+Email: alex.chen@example.com | Phone: +1-555-0192
+Senior Python & AI Engineer with 5+ years of experience building production NLP models, FastAPI backends, and RAG architectures.
+
+Core Skills:
+- Python, FastAPI, Docker, RAG, FAISS, LangChain, PyTorch, Scikit-learn, PostgreSQL, REST API.
+Experience:
+- Architected vector search retrieval pipeline serving 100k queries/day with FAISS and Python.
+- Built scalable FastAPI microservices with Docker deployment on AWS.
+Education:
+- B.S. in Computer Science
